@@ -12,6 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read # deploy-pages, yüklenen artefaktı listelemek için gerekli
   contents: write
   pages: write
   id-token: write
