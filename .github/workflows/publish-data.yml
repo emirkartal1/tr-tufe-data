@@ -30,21 +30,35 @@ jobs:
         with:
           ref: gh-pages
           path: pages
+      # İki üretici bağımsızdır: biri doğrulamada takılırsa diğeri yine yayınlanır
+      # (takılan, eski dosyaya dokunmaz). Son adım yine de işi kırmızı yapar.
       - name: Generate tufe.json
+        id: tufe
+        continue-on-error: true
         run: python3 tools/update_tufe.py pages/tufe.json
+      - name: Generate kur.json
+        id: kur
+        continue-on-error: true
+        run: python3 tools/update_kur.py pages/kur.json
       - name: Commit to gh-pages
         working-directory: pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tufe.json
+          git add tufe.json kur.json
           if git diff --cached --quiet; then
             echo "Değişiklik yok"
           else
             git commit -m "Update tufe.json"
             git push
           fi
+      - name: Fail if a generator failed
+        if: steps.tufe.outcome == 'failure' || steps.kur.outcome == 'failure'
+        run: |
+          echo "tufe: ${{ steps.tufe.outcome }}, kur: ${{ steps.kur.outcome }}"
+          exit 1
       - name: Keep schedule alive
+        if: always()
         run: |
           last=$(git log -1 --format=%ct)
           now=$(date +%s)
