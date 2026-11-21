@@ -1,9 +1,12 @@
-# TÜFE verisini günde bir kez TCMB sayfasından okuyup GitHub Pages'e yayınlar.
-# Doğrulama başarısız olursa iş HATA verir ve yayına gitmez; Pages'teki son iyi dosya kalır.
+# TÜFE verisini günde bir kez TCMB sayfasından okuyup `gh-pages` dalına işler;
+# GitHub Pages o daldan yayınlar (Ayarlar → Pages → Source: gh-pages).
+#
+# Doğrulama başarısız olursa iş HATA verir ve dala hiçbir şey yazılmaz; yayındaki
+# son iyi dosya olduğu gibi kalır.
 #
 # Not: herkese açık depolarda zamanlanmış iş, 60 gün hiç etkinlik olmazsa GitHub
 # tarafından kapatılır. "Keep schedule alive" adımı bunu önlemek için gerekirse
-# boş bir commit atar.
+# ana dala boş bir commit atar.
 name: Publish data
 
 on:
@@ -12,35 +15,35 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read # deploy-pages, yüklenen artefaktı listelemek için gerekli
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: publish-data
   cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          ref: gh-pages
+          path: pages
       - name: Generate tufe.json
+        run: python3 tools/update_tufe.py pages/tufe.json
+      - name: Commit to gh-pages
+        working-directory: pages
         run: |
-          mkdir -p site
-          python3 tools/update_tufe.py site/tufe.json
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tufe.json
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok"
+          else
+            git commit -m "Update tufe.json"
+            git push
+          fi
       - name: Keep schedule alive
         run: |
           last=$(git log -1 --format=%ct)
