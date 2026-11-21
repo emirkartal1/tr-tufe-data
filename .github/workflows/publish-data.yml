@@ -32,10 +32,15 @@ jobs:
           path: pages
       # İki üretici bağımsızdır: biri doğrulamada takılırsa diğeri yine yayınlanır
       # (takılan, eski dosyaya dokunmaz). Son adım yine de işi kırmızı yapar.
-      - name: Generate tufe.json
+      # TÜFE kaynağı TÜİK (SDMX API). Anahtar şifreli secret'tan gelir; günlüklere maskelenir.
+      # Doğrulama ya da kimlik doğrulama başarısız olursa dosyaya dokunulmaz ve TCMB'ye
+      # geri DÖNÜLMEZ (TCMB'nin ticari kullanım koşulu ayrıdır); yayındaki son iyi dosya kalır.
+      - name: Generate tufe.json (TÜİK)
         id: tufe
         continue-on-error: true
-        run: python3 tools/update_tufe.py pages/tufe.json
+        env:
+          TUIK_API_KEY: ${{ secrets.TUIK_API_KEY }}
+        run: python3 tools/update_tufe_tuik.py pages/tufe.json
       - name: Generate kur.json
         id: kur
         continue-on-error: true
